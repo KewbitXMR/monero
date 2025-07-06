@@ -9,6 +9,12 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**/README.md'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force run reason'
+        required: false
+        default: 'Manual trigger'
 
 # The below variables reduce repetitions across similar targets
 env:

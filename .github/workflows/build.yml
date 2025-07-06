@@ -76,7 +76,20 @@ jobs:
       - uses: msys2/setup-msys2@v2
         with:
           update: true
-          install: mingw-w64-x86_64-toolchain make mingw-w64-x86_64-ccache mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-protobuf-c mingw-w64-x86_64-libusb mingw-w64-x86_64-unbound git
+          install: >
+            mingw-w64-x86_64-toolchain
+            make
+            mingw-w64-x86_64-ccache
+            mingw-w64-x86_64-boost
+            mingw-w64-x86_64-openssl
+            mingw-w64-x86_64-zeromq
+            mingw-w64-x86_64-libsodium
+            mingw-w64-x86_64-hidapi
+            mingw-w64-x86_64-protobuf-c
+            mingw-w64-x86_64-libusb
+            mingw-w64-x86_64-unbound
+            git
+            mingw-w64-x86_64-cmake
       - name: Override with CMake 3.27.7
         run: |
           pacman -Rdd --noconfirm mingw-w64-x86_64-cmake
@@ -96,6 +109,11 @@ jobs:
     steps:
       - name: install dependencies
         run: pacman -Syyu --noconfirm base-devel git cmake boost openssl zeromq unbound libsodium readline expat gtest python3 doxygen graphviz hidapi libusb protobuf
+      - name: Downgrade cmake from Arch Archive (e.g. 3.25.2)
+        run: |
+          curl -LO https://archive.archlinux.org/packages/c/cmake/cmake-3.25.2-1-x86_64.pkg.tar.zst
+          pacman -U --noconfirm cmake-3.25.2-1-x86_64.pkg.tar.zst
+          cmake --version
       - name: configure git
         run: git config --global --add safe.directory '*'
       - uses: actions/checkout@v4

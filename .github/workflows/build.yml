@@ -91,10 +91,22 @@ jobs:
             git
             mingw-w64-x86_64-cmake
       - uses: ./.github/actions/set-make-job-count
+      - name: Monkey-patch cmake to inject policy version
+        run: |
+          mv /usr/bin/cmake /usr/bin/cmake.real
+          echo '#!/bin/bash' > /usr/bin/cmake
+          echo 'exec /usr/bin/cmake.real -DCMAKE_POLICY_VERSION=3.28 "$@"' >> /usr/bin/cmake
+          chmod +x /usr/bin/cmake
+      - name: Monkey-patch cmake (MSYS2)
+        shell: msys2 {0}
+        run: |
+          mv /mingw64/bin/cmake.exe /mingw64/bin/cmake.real.exe
+          echo -e '#!/bin/bash\nexec /mingw64/bin/cmake.real.exe -DCMAKE_POLICY_VERSION=3.28 "$@"' > /mingw64/bin/cmake
+          chmod +x /mingw64/bin/cmake
       - name: build
         run: |
           ${{env.CCACHE_SETTINGS}}
-          -DCMAKE_POLICY_VERSION=3.28 make release-static-win64 -j${{env.MAKE_JOB_COUNT}}
+          make release-static-win64 -j${{env.MAKE_JOB_COUNT}}
 
   build-arch:
     name: 'Arch Linux'

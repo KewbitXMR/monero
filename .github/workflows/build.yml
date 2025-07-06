@@ -107,13 +107,14 @@ jobs:
     container:
       image: archlinux:latest
     steps:
+      - name: Download cmake 3.25.2 standalone from Kitware
+        run: |
+          curl -LO https://github.com/Kitware/CMake/releases/download/v3.25.2/cmake-3.25.2-linux-x86_64.tar.gz
+          tar -xzf cmake-3.25.2-linux-x86_64.tar.gz
+          echo "$PWD/cmake-3.25.2-linux-x86_64/bin" >> $GITHUB_PATH
+          cmake --version
       - name: install dependencies
         run: pacman -Syyu --noconfirm base-devel git cmake boost openssl zeromq unbound libsodium readline expat gtest python3 doxygen graphviz hidapi libusb protobuf
-      - name: Downgrade cmake from Arch Archive (e.g. 3.25.2)
-        run: |
-          curl -LO https://archive.archlinux.org/packages/c/cmake/cmake-3.25.2-1-x86_64.pkg.tar.zst
-          pacman -U --noconfirm cmake-3.25.2-1-x86_64.pkg.tar.zst
-          cmake --version
       - name: configure git
         run: git config --global --add safe.directory '*'
       - uses: actions/checkout@v4

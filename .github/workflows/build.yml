@@ -90,11 +90,6 @@ jobs:
             mingw-w64-x86_64-unbound
             git
             mingw-w64-x86_64-cmake
-      - name: Override with CMake 3.27.7
-        run: |
-          pacman -Rdd --noconfirm mingw-w64-x86_64-cmake
-          curl -LO https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-cmake-3.27.7-1-any.pkg.tar.zst
-          pacman -U --noconfirm mingw-w64-x86_64-cmake-3.27.7-1-any.pkg.tar.zst
       - uses: ./.github/actions/set-make-job-count
       - name: build
         run: |
@@ -107,12 +102,6 @@ jobs:
     container:
       image: archlinux:latest
     steps:
-      - name: Download cmake 3.25.2 standalone from Kitware
-        run: |
-          curl -LO https://github.com/Kitware/CMake/releases/download/v3.25.2/cmake-3.25.2-linux-x86_64.tar.gz
-          tar -xzf cmake-3.25.2-linux-x86_64.tar.gz
-          echo "$PWD/cmake-3.25.2-linux-x86_64/bin" >> $GITHUB_PATH
-          cmake --version
       - name: install dependencies
         run: pacman -Syyu --noconfirm base-devel git cmake boost openssl zeromq unbound libsodium readline expat gtest python3 doxygen graphviz hidapi libusb protobuf
       - name: configure git

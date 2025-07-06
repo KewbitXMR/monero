@@ -94,7 +94,7 @@ jobs:
       - name: build
         run: |
           ${{env.CCACHE_SETTINGS}}
-          make release-static-win64 -j${{env.MAKE_JOB_COUNT}}
+          -DCMAKE_POLICY_VERSION=3.28 make release-static-win64 -j${{env.MAKE_JOB_COUNT}}
 
   build-arch:
     name: 'Arch Linux'

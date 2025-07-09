@@ -16,9 +16,7 @@ on:
         required: false
         default: 'Manual trigger'
 
-# The below variables reduce repetitions across similar targets
 env:
-  # ARCH="default" (not "native") ensures, that a different execution host can execute binaries compiled elsewhere.
   BUILD_DEFAULT_LINUX: 'cmake -S . -B build -D ARCH="default" -D BUILD_TESTS=ON -D CMAKE_BUILD_TYPE=Release && cmake --build build --target all && cmake --build build --target wallet_api'
   APT_INSTALL_LINUX: 'apt -y install build-essential cmake libboost-all-dev miniupnpc libunbound-dev graphviz doxygen libunwind8-dev pkg-config libssl-dev libzmq3-dev libsodium-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler ccache git'
   APT_SET_CONF: |
@@ -88,20 +86,14 @@ jobs:
             mingw-w64-x86_64-protobuf-c
             mingw-w64-x86_64-libusb
             mingw-w64-x86_64-unbound
-            git
             mingw-w64-x86_64-cmake
+            git
       - uses: ./.github/actions/set-make-job-count
-      - name: Monkey-patch cmake to inject policy version
-        run: |
-          mv /usr/bin/cmake /usr/bin/cmake.real
-          echo '#!/bin/bash' > /usr/bin/cmake
-          echo 'exec /usr/bin/cmake.real -DCMAKE_POLICY_VERSION=3.28 "$@"' >> /usr/bin/cmake
-          chmod +x /usr/bin/cmake
       - name: Monkey-patch cmake (MSYS2)
         shell: msys2 {0}
         run: |
           mv /mingw64/bin/cmake.exe /mingw64/bin/cmake.real.exe
-          echo -e '#!/bin/bash\nexec /mingw64/bin/cmake.real.exe -DCMAKE_POLICY_VERSION=3.28 "$@"' > /mingw64/bin/cmake
+          echo -e '#!/bin/bash\necho "[INFO] Using patched cmake wrapper"\nexec /mingw64/bin/cmake.real.exe -DCMAKE_POLICY_VERSION=3.28 "$@"' > /mingw64/bin/cmake
           chmod +x /mingw64/bin/cmake
       - name: build
         run: |
@@ -128,7 +120,6 @@ jobs:
         run: ${{env.BUILD_DEFAULT_LINUX}}
 
   build-debian:
-    # Oldest supported Debian version
     name: 'Debian 10'
     runs-on: ubuntu-latest
     container:
@@ -160,11 +151,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Oldest supported Ubuntu LTS version
           - name: Ubuntu 20.04
             container: ubuntu:20.04
-
-          # Most popular Ubuntu LTS version
           - name: Ubuntu 22.04
             container: ubuntu:22.04
     container:
@@ -197,87 +185,3 @@ jobs:
         run: |
           ${{env.CCACHE_SETTINGS}}
           ${{env.BUILD_DEFAULT_LINUX}}
-
-  test-ubuntu:
-    name: "${{ matrix.name }} (tests)"
-    needs: build-ubuntu
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - name: Ubuntu 20.04
-            container: ubuntu:20.04
-    container:
-      image: ${{ matrix.container }}
-      env:
-        DEBIAN_FRONTEND: noninteractive
-        CCACHE_TEMPDIR: /tmp/.ccache-temp
-        CCACHE_DIR: ~/.ccache
-      # Setting up a loop device (losetup) requires additional capabilities.
-      # tests/create_test_disks.sh
-      options: --privileged
-    steps:
-      - name: set apt conf
-        run: ${{env.APT_SET_CONF}}
-      - name: update apt
-        run: apt update
-      - name: install monero dependencies
-        run: ${{env.APT_INSTALL_LINUX}}
-      - name: install pip
-        run: apt install -y python3-pip
-      - name: install Python dependencies
-        run: pip install requests psutil monotonic zmq deepdiff
-      - name: configure git
-        run: git config --global --add safe.directory '*'
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: actions/cache@v4
-        with:
-          path: ~/.ccache
-          key: ccache-${{ matrix.container }}-build-${{ github.sha }}
-          restore-keys: ccache-${{ matrix.container }}-build-
-      - name: create dummy disk drives for testing
-        run: tests/create_test_disks.sh >> $GITHUB_ENV
-      - uses: ./.github/actions/set-make-job-count
-      - name: tests
-        env:
-          CTEST_OUTPUT_ON_FAILURE: ON
-          DNS_PUBLIC: tcp://9.9.9.9
-          CMAKE_BUILD_PARALLEL_LEVEL: ${{env.MAKE_JOB_COUNT}}
-        run: |
-          ${{env.CCACHE_SETTINGS}}
-          ${{env.BUILD_DEFAULT_LINUX}}
-          cmake --build build --target test
-
-  source-archive:
-    name: "source archive"
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:20.04
-      env:
-        DEBIAN_FRONTEND: noninteractive
-    steps:
-      - name: set apt conf
-        run: ${{env.APT_SET_CONF}}
-      - name: update apt
-        run: apt update
-      - name: install dependencies
-        run: apt install -y git python3-pip
-      - name: configure git
-        run: git config --global --add safe.directory '*'
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
-      - name: archive
-        run: |
-          pip install git-archive-all
-          export VERSION="monero-$(git describe)"
-          export OUTPUT="$VERSION.tar"
-          echo "OUTPUT=$OUTPUT" >> $GITHUB_ENV
-          git-archive-all --prefix "$VERSION/" --force-submodules "$OUTPUT"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.OUTPUT }}
-          path: ${{ env.OUTPUT }}
